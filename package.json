@@ -1,0 +1,14 @@
+{
+  "name": "crossword-for-granny",
+  "version": "1.0.0",
+  "description": "A crossword generator with actual solutions, for granny",
+  "license": "MIT",
+  "scripts": {
+    "start:dev": "node src/index.js",
+    "test": "mocha --recursive"
+  },
+  "devDependencies": {
+    "chai": "^4.3.3",
+    "mocha": "^8.3.1"
+  }
+}
