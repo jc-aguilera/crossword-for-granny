@@ -1,4 +1,10 @@
-import { getRandomInt } from './utils';
+import {
+  isSameWordList,
+  generatePairs,
+  getRandomInt,
+  gridWords,
+  scramble,
+} from './utils';
 
 type direction = 'horizontal' | 'vertical';
 interface Word {
@@ -11,33 +17,14 @@ interface Word {
 export interface CrosswordPuzzle {
   size: [number, number];
   words: Word[];
-  readonly filledGrid: string[][];
+  filledGrid(): string[][];
   addWord: (newWord: string) => boolean;
 }
 
 export const puzzle: CrosswordPuzzle = {
   size: [10, 10],
-  words: [
-    {
-      word: 'perro',
-      direction: 'vertical',
-      xStart: 2,
-      yStart: 0,
-    },
-    {
-      word: 'gato',
-      direction: 'vertical',
-      xStart: 2,
-      yStart: 9,
-    },
-    {
-      word: 'loro',
-      direction: 'vertical',
-      xStart: 2,
-      yStart: 1,
-    },
-  ],
-  get filledGrid() {
+  words: [],
+  filledGrid() {
     const grid: string[][] = [...new Array(this.size[0])].map(() =>
       new Array(this.size[1]).fill(''),
     );
@@ -56,7 +43,46 @@ export const puzzle: CrosswordPuzzle = {
       this.size[0] - (dir === 'vertical' ? newWord.length : 0),
       this.size[1] - (dir === 'horizontal' ? newWord.length : 0),
     ];
-    console.log(dir, [horzLimit, vertLimit]);
-    return true;
+    const possiblePairs = scramble(generatePairs(horzLimit, vertLimit), rng);
+    return possiblePairs.some((pair, index) => {
+      const grid = this.filledGrid();
+      const [currentDown, currentRight] = pair;
+      if (
+        newWord.split('').every((letter, position) => {
+          const gridLetter = grid[
+            currentDown + (dir === 'vertical' ? position : 0)
+          ][
+            currentRight + (dir === 'horizontal' ? position : 0)
+          ].toLocaleUpperCase();
+          return !gridLetter || gridLetter === letter.toLocaleUpperCase();
+        })
+      ) {
+        const newGrid: CrosswordPuzzle = { ...this, words: [...this.words] };
+        newGrid.words.push({
+          word: newWord,
+          direction: dir,
+          xStart: currentDown,
+          yStart: currentRight,
+        });
+        if (
+          isSameWordList(
+            gridWords({ grid: newGrid.filledGrid() }),
+            [
+              ...this.words.map(({ word }) => word.toLocaleUpperCase()),
+              newWord.toLocaleUpperCase(),
+            ].sort(),
+          )
+        ) {
+          this.words.push({
+            word: newWord,
+            direction: dir,
+            xStart: currentDown,
+            yStart: currentRight,
+          });
+          return true;
+        }
+      }
+      return false;
+    });
   },
 };

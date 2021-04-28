@@ -1,4 +1,4 @@
-import { CrosswordPuzzle } from '../grid';
+import { CrosswordPuzzle, puzzle } from '../grid';
 
 function rowWords(grid: string[][]): string[] {
   const word = grid.map((row) => row.map((c) => c || ' ').join(''));
@@ -8,18 +8,23 @@ function rowWords(grid: string[][]): string[] {
     .filter((w) => w.length > 1);
 }
 
-export function horizontalWords(
-  puzzle: CrosswordPuzzle,
-): Array<string> | void {
-  const grid = puzzle.filledGrid;
+export function horizontalWords({ grid }: { grid: string[][] }): string[] {
   return rowWords(grid);
 }
 
-export function verticalWords(puzzle: CrosswordPuzzle): Array<string> | void {
-  const transposedGrid = transpose(puzzle.filledGrid);
-  return rowWords(transposedGrid);
+export function verticalWords({ grid }: { grid: string[][] }): string[] {
+  return rowWords(transpose(grid));
 }
 
+export function gridWords({ grid }: { grid: string[][] }): string[] {
+  return [...horizontalWords({ grid }), ...verticalWords({ grid })];
+}
+
+export function isSameWordList(list1: string[], list2: string[]): boolean {
+  return (
+    JSON.stringify([...list1].sort()) === JSON.stringify([...list2].sort())
+  );
+}
 export function keepTilde(str: string): string {
   return str
     .normalize('NFD')
@@ -27,6 +32,14 @@ export function keepTilde(str: string): string {
     .normalize();
 }
 
+export function scramble<T>(list: T[], rng = Math.random): T[] {
+  const a = [...list];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 export function getRandomInt(
   min: number,
   max: number,
@@ -49,4 +62,17 @@ export function generatePairs(
   for (let i = 0; i < horzLimit; i++)
     for (let j = 0; j < vertLimit; j++) pairs.push([i, j]);
   return pairs;
+}
+
+export function prettyGrid(puzzle: CrosswordPuzzle): string {
+  let prettyString = '';
+  const separator = Array(puzzle.size[0] * 2 + 1)
+    .fill('-')
+    .join('');
+  prettyString += separator + '\n';
+  puzzle.filledGrid().forEach((row) => {
+    prettyString += '|' + row.map((c) => c || ' ').join('|') + '|\n';
+    prettyString += separator + '\n';
+  });
+  return prettyString;
 }
