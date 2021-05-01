@@ -4,6 +4,7 @@ import {
   getRandomInt,
   gridWords,
   scramble,
+  keepTilde,
 } from './utils';
 
 type direction = 'horizontal' | 'vertical';
@@ -13,16 +14,16 @@ interface Word {
   xStart: number;
   yStart: number;
 }
-
 export interface CrosswordPuzzle {
   size: [number, number];
   words: Word[];
   filledGrid(): string[][];
-  addWord: (newWord: string) => boolean;
+  addWordAtRandomPosition: (newWord: string) => boolean;
+  addWord: (word: Word) => boolean;
 }
 
 export const puzzle: CrosswordPuzzle = {
-  size: [10, 10],
+  size: [13, 13],
   words: [],
   filledGrid() {
     const grid: string[][] = [...new Array(this.size[0])].map(() =>
@@ -37,52 +38,65 @@ export const puzzle: CrosswordPuzzle = {
     });
     return grid;
   },
-  addWord(newWord: string, rng = Math.random): boolean {
+  addWordAtRandomPosition(
+    potentialNewWord: string,
+    rng = Math.random,
+  ): boolean {
+    const newWord = keepTilde(potentialNewWord).toLocaleUpperCase();
     const dir: direction = getRandomInt(0, 2, rng) ? 'horizontal' : 'vertical';
     const [horzLimit, vertLimit] = [
       this.size[0] - (dir === 'vertical' ? newWord.length : 0),
       this.size[1] - (dir === 'horizontal' ? newWord.length : 0),
     ];
     const possiblePairs = scramble(generatePairs(horzLimit, vertLimit), rng);
-    return possiblePairs.some((pair, index) => {
-      const grid = this.filledGrid();
-      const [currentDown, currentRight] = pair;
+    return possiblePairs.some(([xStart, yStart]) =>
+      this.addWord({
+        word: newWord,
+        direction: dir,
+        xStart,
+        yStart,
+      }),
+    );
+  },
+
+  addWord(wordToCheck: Word) {
+    const { word, xStart, yStart, direction } = wordToCheck;
+    const grid = this.filledGrid();
+    if (
+      word.split('').every((letter, position) => {
+        const gridLetter = grid[
+          xStart + (direction === 'vertical' ? position : 0)
+        ][
+          yStart + (direction === 'horizontal' ? position : 0)
+        ].toLocaleUpperCase();
+        return !gridLetter || gridLetter === letter.toLocaleUpperCase();
+      })
+    ) {
+      const newGrid: CrosswordPuzzle = { ...this, words: [...this.words] };
+      newGrid.words.push({
+        word,
+        direction,
+        xStart,
+        yStart,
+      });
       if (
-        newWord.split('').every((letter, position) => {
-          const gridLetter = grid[
-            currentDown + (dir === 'vertical' ? position : 0)
-          ][
-            currentRight + (dir === 'horizontal' ? position : 0)
-          ].toLocaleUpperCase();
-          return !gridLetter || gridLetter === letter.toLocaleUpperCase();
-        })
+        isSameWordList(
+          gridWords({ grid: newGrid.filledGrid() }),
+          [
+            ...this.words.map(({ word }) => word.toLocaleUpperCase()),
+            word.toLocaleUpperCase(),
+          ].sort(),
+        )
       ) {
-        const newGrid: CrosswordPuzzle = { ...this, words: [...this.words] };
-        newGrid.words.push({
-          word: newWord,
-          direction: dir,
-          xStart: currentDown,
-          yStart: currentRight,
+        this.words.push({
+          word: word,
+          direction: direction,
+          xStart: xStart,
+          yStart: yStart,
         });
-        if (
-          isSameWordList(
-            gridWords({ grid: newGrid.filledGrid() }),
-            [
-              ...this.words.map(({ word }) => word.toLocaleUpperCase()),
-              newWord.toLocaleUpperCase(),
-            ].sort(),
-          )
-        ) {
-          this.words.push({
-            word: newWord,
-            direction: dir,
-            xStart: currentDown,
-            yStart: currentRight,
-          });
-          return true;
-        }
+        return true;
       }
-      return false;
-    });
+    }
+    return false;
   },
 };
