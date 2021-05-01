@@ -18,7 +18,7 @@ export interface CrosswordPuzzle {
   size: [number, number];
   words: Word[];
   filledGrid(): string[][];
-  addWordAtRandomPosition: (newWord: string) => boolean;
+  addWordAtRandomPosition: (newWord: string, rng?: () => number) => boolean;
   addWord: (word: Word) => boolean;
 }
 
